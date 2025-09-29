@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Login - Lost & Found</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+  <nav class="nav-wrapper blue darken-2">
+    <div class="container">
+      <a href="index.html" class="brand-logo"><img class="brand-logo-img" src="images/logo.png" alt="logo"></a>
+      <ul class="right">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="signup.html">Signup</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="main-body">
+    <div class="container">
+      <div class="row">
+        <form id="loginForm" class="col s12 m6 offset-m3 card-panel" novalidate>
+          <h5 class="center">Login</h5>
+          <div class="input-field">
+            <input id="email" type="email" required>
+            <label for="email">Email</label>
+          </div>
+          <div class="input-field">
+            <input id="password" type="password" required>
+            <label for="password">Password</label>
+          </div>
+          <button class="btn waves-effect waves-light" id="loginBtn" type="submit">
+            Login
+          </button>
+          <p class="right" style="margin-top: 12px;"><a href="signup.html">Create an account</a></p>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    (function () {
+      var form = document.getElementById('loginForm');
+      var btn = document.getElementById('loginBtn');
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        var email = (document.getElementById('email').value || '').trim().toLowerCase();
+        var password = document.getElementById('password').value;
+
+        if (!email) { M.toast({ html: 'Please enter your email' }); return; }
+        if (!password) { M.toast({ html: 'Please enter your password' }); return; }
+
+        setBtnLoading(btn, true);
+        try {
+          var healthOk = false;
+          try { healthOk = await fetch(API_BASE + '/api/health').then(r => r.ok); } catch (_) {}
+          if (!healthOk) { M.toast({ html: 'Cannot reach API at ' + API_BASE }); return; }
+
+          var res = await fetch(API_BASE + '/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email, password: password })
+          });
+
+          var json = {};
+          try { json = await res.json(); } catch (_) {}
+
+          if (!res.ok) {
+            M.toast({ html: json.message || ('Invalid email or password (' + res.status + ')') });
+            console.warn('[login] status', res.status, json);
+            return;
+          }
+
+          localStorage.setItem('token', json.token);
+          M.toast({ html: 'Logged in!' });
+          await updateNavAuthState();
+          setTimeout(function(){ window.location.href = 'index.html'; }, 500);
+        } catch (err) {
+          console.error('[login] network error', err);
+          M.toast({ html: 'Network error during login: ' + err.message });
+        } finally {
+          setBtnLoading(btn, false);
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
